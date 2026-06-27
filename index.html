@@ -276,6 +276,18 @@
     }
     .pks-pb-ing { color: var(--pks-text-dim); }
     .pks-pb-val { color: var(--pks-green); font-weight: 700; }
+
+    /* アコーディオン */
+    .pks-accordion-btn {
+      width: 100%; background: rgba(169,142,232,0.08);
+      border: 1px solid var(--pks-border); border-radius: 8px;
+      color: var(--pks-text-dim); font-size: 11.5px; font-weight: 700;
+      padding: 7px 12px; cursor: pointer; text-align: left;
+      margin-top: 8px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .pks-accordion-btn:hover { border-color: var(--pks-purple); color: var(--pks-text); }
+    .pks-accordion-body { display: none; margin-top: 8px; }
+    .pks-accordion-body.open { display: block; }
   </style>
 </head>
 <body>
@@ -700,23 +712,36 @@ function pokemonFormHTML(pre) {
         <div class="pks-sw"><select id="${pre}_pat">${optsPattern()}</select></div>
       </div>
     </div>
-    <div class="pks-row2">
-      <div class="field">
-        <label>性格↑</label>
-        <div class="pks-sw"><select id="${pre}_nu">${optsNature(NATURES_UP)}</select></div>
+    <button class="pks-accordion-btn" type="button" onclick="toggleAccordion('${pre}_detail')">
+      <span>性格・サブスキルを設定</span><span id="${pre}_detail_arrow">▼</span>
+    </button>
+    <div class="pks-accordion-body" id="${pre}_detail">
+      <div class="pks-row2">
+        <div class="field">
+          <label>性格↑</label>
+          <div class="pks-sw"><select id="${pre}_nu">${optsNature(NATURES_UP)}</select></div>
+        </div>
+        <div class="field">
+          <label>性格↓</label>
+          <div class="pks-sw"><select id="${pre}_nd">${optsNature(NATURES_DOWN)}</select></div>
+        </div>
       </div>
       <div class="field">
-        <label>性格↓</label>
-        <div class="pks-sw"><select id="${pre}_nd">${optsNature(NATURES_DOWN)}</select></div>
-      </div>
-    </div>
-    <div class="field">
-      <label>サブスキル（${SUB_LABELS.join(" / ")}）</label>
-      <div class="pks-subs">
-        ${SUB_IDS.map(sid => `<div class="pks-sw"><select id="${pre}_${sid}">${optsSub()}</select></div>`).join("")}
+        <label>サブスキル（${SUB_LABELS.join(" / ")}）</label>
+        <div class="pks-subs">
+          ${SUB_IDS.map(sid => `<div class="pks-sw"><select id="${pre}_${sid}">${optsSub()}</select></div>`).join("")}
+        </div>
       </div>
     </div>
   `;
+}
+
+function toggleAccordion(id) {
+  const body = document.getElementById(id);
+  const arrow = document.getElementById(id + '_arrow');
+  if (!body) return;
+  const isOpen = body.classList.toggle('open');
+  if (arrow) arrow.textContent = isOpen ? '▲' : '▼';
 }
 
 /* ===== 料理行 ===== */

@@ -104,11 +104,12 @@
       border-radius: 12px;
       padding: 12px;
     }
-    .pks-comp-item label {
+    .pks-comp-label {
       font-size: 13px;
       font-weight: 800;
       color: var(--pks-text);
       margin-bottom: 8px;
+      display: block;
     }
     .pks-comp-item .pks-comp-emoji { font-size: 18px; display: block; margin-bottom: 4px; }
     .pks-counter {
@@ -285,7 +286,7 @@
       <div class="pks-comp-grid">
         <div class="pks-comp-item">
           <span class="pks-comp-emoji">🍒</span>
-          <label>きのみ</label>
+          <div class="pks-comp-label">きのみ</div>
           <div class="pks-counter">
             <button class="pks-counter-btn" onclick="changeComp('berry',-1)">−</button>
             <span class="pks-counter-val" id="compVal_berry">0</span>
@@ -294,7 +295,7 @@
         </div>
         <div class="pks-comp-item">
           <span class="pks-comp-emoji">🍳</span>
-          <label>食材</label>
+          <div class="pks-comp-label">食材</div>
           <div class="pks-counter">
             <button class="pks-counter-btn" onclick="changeComp('ing',-1)">−</button>
             <span class="pks-counter-val" id="compVal_ing">0</span>
@@ -303,7 +304,7 @@
         </div>
         <div class="pks-comp-item">
           <span class="pks-comp-emoji">⚡</span>
-          <label>スキル</label>
+          <div class="pks-comp-label">スキル</div>
           <div class="pks-counter">
             <button class="pks-counter-btn" onclick="changeComp('skill',-1)">−</button>
             <span class="pks-counter-val" id="compVal_skill">0</span>
@@ -312,7 +313,7 @@
         </div>
         <div class="pks-comp-item">
           <span class="pks-comp-emoji">💚</span>
-          <label>ヒーラー</label>
+          <div class="pks-comp-label">ヒーラー</div>
           <div class="pks-counter">
             <button class="pks-counter-btn" onclick="changeComp('healer',-1)">−</button>
             <span class="pks-counter-val" id="compVal_healer">0</span>

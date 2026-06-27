@@ -888,6 +888,15 @@ function mergeIng(a,b) {
   return r;
 }
 
+// 1日フル稼働・げんき常時MAX前提の純粋な食材獲得量
+function calcDaily(entry) {
+  if (!entry) return {};
+  const result = calcWeekly(entry);
+  const daily = {};
+  for (const [k,v] of Object.entries(result)) daily[k] = v / 7;
+  return daily;
+}
+
 function calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeed) {
   // 1日分の必要量を登録順に満たしていく稼働日数シミュレーション
   // ingEntries: [{entry, weekly}] 登録順
@@ -1010,9 +1019,9 @@ function calculate() {
     const scaledWeekly = {};
     for (const [k,v] of Object.entries(weekly)) scaledWeekly[k] = v * scale;
     have = mergeIng(have, scaledWeekly);
-    const daily = {};
-    for (const [k,v] of Object.entries(scaledWeekly)) daily[k] = v / 7;
-    perPokemon.push({ name: e.pokemon.name, slotType: "ing", daily, workDays: workDays[i] });
+    // 表示用dailyはフル稼働1日分（稼働率なし）
+    const displayDaily = calcDaily(e);
+    perPokemon.push({ name: e.pokemon.name, slotType: "ing", daily: displayDaily, workDays: workDays[i] });
   });
 
   // きのみ・スキルはフル稼働
@@ -1021,9 +1030,8 @@ function calculate() {
     if (!e) continue;
     const weekly = calcWeekly(e);
     have = mergeIng(have, weekly);
-    const daily = {};
-    for (const [k,v] of Object.entries(weekly)) daily[k] = v / 7;
-    perPokemon.push({ name: e.pokemon.name, slotType: slot.slotType, daily, workDays: 7 });
+    const displayDaily = calcDaily(e);
+    perPokemon.push({ name: e.pokemon.name, slotType: slot.slotType, daily: displayDaily, workDays: 7 });
   }
 
   const need = weeklyNeed;
@@ -1088,8 +1096,8 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
   const slotEmoji = { berry:"🍒", ing:"🍳", skill:"⚡" };
   const pbHtml = perPokemon.map(p => {
     const workNote = p.slotType === "ing"
-      ? `<span style="font-size:10px;color:var(--pks-text-dim);margin-left:6px;">稼働 ${p.workDays.toFixed(1)}日/週</span>`
-      : `<span style="font-size:10px;color:var(--pks-text-dim);margin-left:6px;">フル稼働</span>`;
+      ? `<span style="font-size:10px;color:var(--pks-text-dim);margin-left:6px;">実稼働 ${p.workDays.toFixed(1)}日/週</span>`
+      : `<span style="font-size:10px;color:var(--pks-text-dim);margin-left:6px;"></span>`;
     const lines = Object.entries(p.daily)
       .filter(([,v])=>v>0.01)
       .map(([k,v])=>`<div class="pks-pb-row"><span class="pks-pb-ing">${k}</span><span class="pks-pb-val">${v.toFixed(2)}個/日</span></div>`)
@@ -1113,7 +1121,7 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
     </div>
     ${needKeys.length?`<div class="pks-result-section-title">食材ごとの充足状況（週間）</div><div class="pks-ing-grid">${ingHtml}</div>`:""}
     ${detailHtml}
-    <div class="pks-result-section-title" style="margin-top:16px;">🐾 ポケモン別 食材獲得量（1日あたり）</div>
+    <div class="pks-result-section-title" style="margin-top:16px;">🐾 ポケモン別 食材獲得量（1日フル稼働・げんきMAX想定）</div>
     <div class="pks-pb-list">${pbHtml}</div>
     <div class="pks-extra">
       <div class="pks-extra-label">📦 余剰食材（週間・料理使用後の残り）</div>

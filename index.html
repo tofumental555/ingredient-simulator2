@@ -879,14 +879,25 @@ function calculate() {
   let have = {};
   const perPokemon = [];
 
+  // 食材ポケモンは「枠数/登録体数」で稼働率を按分
+  const ingSlotCount = comp.ing; // 食材枠数（例:3）
+  const ingPokemonCount = pokemonSlots.filter(s => s.slotType === "ing").length; // 登録体数（例:4）
+  const ingScale = ingPokemonCount > 0 ? ingSlotCount / ingPokemonCount : 1;
+
   for (const slot of pokemonSlots) {
     const e = getEntry(slot.prefix);
     if (!e) continue;
-    const weekly = calcWeekly(e);
+    const weeklyRaw = calcWeekly(e);
+
+    // 食材ポケモンのみ稼働率でスケーリング、きのみ・スキル・ヒーラーはそのまま
+    const scale = slot.slotType === "ing" ? ingScale : 1;
+    const weekly = {};
+    for (const [k,v] of Object.entries(weeklyRaw)) weekly[k] = v * scale;
+
     have = mergeIng(have, weekly);
     const daily = {};
     for (const [k,v] of Object.entries(weekly)) daily[k] = v / 7;
-    perPokemon.push({ name: e.pokemon.name, slotType: slot.slotType, daily });
+    perPokemon.push({ name: e.pokemon.name, slotType: slot.slotType, daily, scale });
   }
 
   const need = {};
@@ -963,12 +974,15 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
   // ポケモン別食材内訳（1日あたり）
   const slotEmoji = { berry:"🍒", ing:"🍳", skill:"⚡", healer:"💚" };
   const pbHtml = perPokemon.map(p => {
+    const scaleNote = p.slotType === "ing" && p.scale < 1
+      ? `<span style="font-size:10px;color:var(--pks-text-dim);margin-left:6px;">稼働率 ${Math.round(p.scale*100)}%</span>`
+      : "";
     const lines = Object.entries(p.daily)
       .filter(([,v])=>v>0.01)
       .map(([k,v])=>`<div class="pks-pb-row"><span class="pks-pb-ing">${k}</span><span class="pks-pb-val">${v.toFixed(2)}個/日</span></div>`)
       .join("");
     return `<div class="pks-pb-card">
-      <div class="pks-pb-name">${slotEmoji[p.slotType]??""} ${p.name}</div>
+      <div class="pks-pb-name">${slotEmoji[p.slotType]??""} ${p.name}${scaleNote}</div>
       ${lines||'<div style="font-size:11px;color:var(--pks-text-dim)">食材なし</div>'}
     </div>`;
   }).join("");

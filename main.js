@@ -2,11 +2,12 @@
    GitHub JSON 読み込み先（あなた専用）
 ============================================ */
 
+// ★ リポジトリ名を ingredient-simulator2 に合わせる
 const POKEMON_JSON_URL =
-  "https://tofumental555.github.io/ingredient-simulator/pokemon_data.json";
+  "https://tofumental555.github.io/ingredient-simulator2/pokemon_data.json";
 
 const ING_JSON_URL =
-  "https://tofumental555.github.io/ingredient-simulator/ingredient_energy.json";
+  "https://tofumental555.github.io/ingredient-simulator2/ingredient_energy.json";
 
 /* ============================================
    レシピデータ
@@ -113,11 +114,6 @@ const RECIPE_DATA = {
         "ピュアなオイル": 32
       }
     },
-
-    /* --- サラダ・デザートは長いので PART2 に続く --- */
-  }
-};
-    /* ===== サラダ ===== */
     "サラダ": {
       "とくせんリンゴサラダ": { "とくせんリンゴ": 8 },
       "マメハムサラダ": { "マメミート": 8 },
@@ -225,8 +221,6 @@ const RECIPE_DATA = {
         "とくせんエッグ": 25
       }
     },
-
-    /* ===== デザート ===== */
     "デザート": {
       "みつあつめチョコワッフル": {
         "あまいミツ": 38,
@@ -354,6 +348,7 @@ const RECIPE_DATA = {
     }
   }
 };
+
 /* ============================================
    食材名 正規化
 ============================================ */
@@ -437,14 +432,16 @@ let pokemonSlots = [];
 
 async function loadDB() {
   try {
-    pokemonDB = await (await fetch(POKEMON_JSON_URL)).json();
+    const resP = await fetch(POKEMON_JSON_URL);
+    pokemonDB = await resP.json();
   } catch (e) {
     console.warn("pokemon_data.json 読み込みエラー:", e);
     pokemonDB = [];
   }
 
   try {
-    ingredientEnergyDB = await (await fetch(ING_JSON_URL)).json();
+    const resI = await fetch(ING_JSON_URL);
+    ingredientEnergyDB = await resI.json();
   } catch (e) {
     console.warn("ingredient_energy.json 読み込みエラー:", e);
     ingredientEnergyDB = {};
@@ -529,6 +526,7 @@ function updateCompUI() {
 
   document.getElementById("btnToStep1").disabled = total !== 5;
 }
+
 /* ============================================
    ポケモンスロット生成
 ============================================ */
@@ -982,204 +980,76 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
       return `
         <div class="pks-ing-card">
           <div class="pks-ing-name">${k}</div>
-          <div class="pks-ing-bar-bg">
-            <div class="pks-ing-bar ${ok ? "ok" : "ng"}" style="width:${pct}%"></div>
+          <div class="pks-ing-bar">
+            <div class="pks-ing-bar-inner ${ok ? "ok" : "ng"}" style="width:${pct}%"></div>
           </div>
-          <div class="pks-ing-nums">
-            <span class="pks-ing-have ${ok ? "ok" : "ng"}">${h.toFixed(1)}個</span>
-            <span class="pks-ing-need">必要:${n}</span>
+          <div class="pks-ing-values">
+            必要 ${n.toFixed(1)} / 所持 ${h.toFixed(1)}
           </div>
         </div>
       `;
     })
     .join("");
 
-  let detailHtml = "";
+  const surplusHtml = Object.entries(surplus)
+    .map(
+      ([k, v]) => `
+        <div class="pks-surplus-item">
+          <span class="pks-surplus-name">${k}</span>
+          <span class="pks-surplus-val">${v.toFixed(1)} 個/週 余り</span>
+        </div>
+      `
+    )
+    .join("");
 
-    const shortages = needKeys
-      .filter((k) => (have[k] ?? 0) < need[k])
-      .map(
-        (k) =>
-          `・${k}：あと ${(need[k] - (have[k] ?? 0)).toFixed(1)} 個不足`
-      )
-      .join("<br>");
-
-    detailHtml = `
-      <div class="pks-shortage">
-        <div class="pks-shortage-label">⚠️ 不足している食材</div>
-        <div class="pks-shortage-item">${shortages}</div>
-      </div>
-    `;
-  }
-
-  const slotEmoji = {
-    berry: "🍒",
-    ing: "🍳",
-    skill: "⚡",
-    healer: "💚"
-  };
-
-  const pbHtml = perPokemon
+  const perPokemonHtml = perPokemon
     .map((p) => {
       const lines = Object.entries(p.daily)
-        .filter(([, v]) => v > 0.01)
         .map(
           ([k, v]) =>
-            `<div class="pks-pb-row"><span class="pks-pb-ing">${k}</span><span class="pks-pb-val">${v.toFixed(
-              2
-            )}個/日</span></div>`
+            `<div class="pks-per-line">${k}: ${v.toFixed(2)} 個/日</div>`
         )
         .join("");
 
+      const label =
+        p.slotType === "berry"
+          ? "きのみ"
+          : p.slotType === "ing"
+          ? "食材"
+          : p.slotType === "skill"
+          ? "スキル"
+          : "ヒーラー";
+
       return `
-        <div class="pks-pb-card">
-          <div class="pks-pb-name">${slotEmoji[p.slotType] ?? ""} ${
-        p.name
-      }</div>
-          ${
-            lines ||
-            '<div style="font-size:11px;color:var(--pks-text-dim)">食材なし</div>'
-          }
+        <div class="pks-per-card">
+          <div class="pks-per-header">${label}枠: ${p.name}</div>
+          <div class="pks-per-body">${lines}</div>
         </div>
       `;
     })
     .join("");
 
-  const surplusEntries = Object.entries(surplus).sort((a, b) => b[1] - a[1]);
-  const surplusListHtml = surplusEntries.length
-    ? surplusEntries
-        .map(([k, v]) => `・${k}：${v.toFixed(1)}個/週`)
-        .join("<br>")
-    : "なし";
+  document.getElementById("resultIng").innerHTML = ingHtml || "<p>料理が登録されていません。</p>";
+  document.getElementById("resultSurplus").innerHTML =
+    surplusHtml || "<p>余剰食材はありません。</p>";
+  document.getElementById("resultPerPokemon").innerHTML =
+    perPokemonHtml || "<p>ポケモンが登録されていません。</p>";
 
-  document.getElementById("resultContent").innerHTML = `
-    <div class="pks-verdict">
-      <div class="pks-verdict-main ${allOk ? "ok" : "ng"}">
-        ${allOk ? "✅ 21食分 準備OK！" : "❌ 食材が不足しています"}
-      </div>
-      <div class="pks-verdict-sub">1週間（7日）・21食分シミュレーション結果</div>
-    </div>
-
-    ${
-      needKeys.length
-        ? `<div class="pks-result-section-title">食材ごとの充足状況（週間）</div>
-           <div class="pks-ing-grid">${ingHtml}</div>`
-        : ""
-    }
-
-    ${detailHtml}
-
-    <div class="pks-result-section-title" style="margin-top:16px;">
-      🐾 ポケモン別 食材獲得量（1日あたり）
-    </div>
-    <div class="pks-pb-list">${pbHtml}</div>
-
-    <div class="pks-extra">
-      <div class="pks-extra-label">📦 余剰食材（週間・料理使用後の残り）</div>
-      <div class="pks-extra-item">${surplusListHtml}</div>
-    </div>
-  `;
-}
-
-loadDB();
+  const summaryEl = document.getElementById("resultSummary");
   if (allOk) {
-    detailHtml = `
-      <div class="pks-surplus">
-        <div class="pks-surplus-label">⏱ 時間的余力（最もきつい食材基準）</div>
-        <div class="pks-surplus-val">+${surplusDays.toFixed(1)} 日分</div>
-        <div class="pks-surplus-desc">
-          21食分を約 ${(7 - surplusDays).toFixed(1)} 日で集められる計算です。
-          充足率：${(minRatio * 100).toFixed(0)}%
-        </div>
-      </div>
-    `;
+    summaryEl.textContent =
+      minRatio >= 1
+        ? `21食分をすべて賄えます（最短で ${surplusDays.toFixed(1)} 日分の余裕）。`
+        : "21食分はギリギリ賄えますが、余裕はありません。";
   } else {
-        const shortages = needKeys
-      .filter((k) => (have[k] ?? 0) < need[k])
-      .map(
-        (k) =>
-          `・${k}：あと ${(need[k] - (have[k] ?? 0)).toFixed(1)} 個不足`
-      )
-      .join("<br>");
-
-    detailHtml = `
-      <div class="pks-shortage">
-        <div class="pks-shortage-label">⚠️ 不足している食材</div>
-        <div class="pks-shortage-item">${shortages}</div>
-      </div>
-    `;
+    summaryEl.textContent =
+      "21食分を賄うには、食材が不足しています（不足している食材を確認してください）。";
   }
-
-  const slotEmoji = {
-    berry: "🍒",
-    ing: "🍳",
-    skill: "⚡",
-    healer: "💚"
-  };
-
-  const pbHtml = perPokemon
-    .map((p) => {
-      const lines = Object.entries(p.daily)
-        .filter(([, v]) => v > 0.01)
-        .map(
-          ([k, v]) =>
-            `<div class="pks-pb-row"><span class="pks-pb-ing">${k}</span><span class="pks-pb-val">${v.toFixed(
-              2
-            )}個/日</span></div>`
-        )
-        .join("");
-
-      return `
-        <div class="pks-pb-card">
-          <div class="pks-pb-name">${slotEmoji[p.slotType] ?? ""} ${
-        p.name
-      }</div>
-          ${
-            lines ||
-            '<div style="font-size:11px;color:var(--pks-text-dim)">食材なし</div>'
-          }
-        </div>
-      `;
-    })
-    .join("");
-
-  const surplusEntries = Object.entries(surplus).sort((a, b) => b[1] - a[1]);
-  const surplusListHtml = surplusEntries.length
-    ? surplusEntries
-        .map(([k, v]) => `・${k}：${v.toFixed(1)}個/週`)
-        .join("<br>")
-    : "なし";
-
-  document.getElementById("resultContent").innerHTML = `
-    <div class="pks-verdict">
-      <div class="pks-verdict-main ${allOk ? "ok" : "ng"}">
-        ${allOk ? "✅ 21食分 準備OK！" : "❌ 食材が不足しています"}
-      </div>
-      <div class="pks-verdict-sub">1週間（7日）・21食分シミュレーション結果</div>
-    </div>
-
-    ${
-      needKeys.length
-        ? `<div class="pks-result-section-title">食材ごとの充足状況（週間）</div>
-           <div class="pks-ing-grid">${ingHtml}</div>`
-        : ""
-    }
-
-    ${detailHtml}
-
-    <div class="pks-result-section-title" style="margin-top:16px;">
-      🐾 ポケモン別 食材獲得量（1日あたり）
-    </div>
-    <div class="pks-pb-list">${pbHtml}</div>
-
-    <div class="pks-extra">
-      <div class="pks-extra-label">📦 余剰食材（週間・料理使用後の残り）</div>
-      <div class="pks-extra-item">${surplusListHtml}</div>
-    </div>
-  `;
 }
 
-loadDB();
+/* ============================================
+   初期化
+============================================ */
+
+// DOM が読み込まれたら DB をロードしてイベントを張る
 window.addEventListener("DOMContentLoaded", loadDB);
-
-

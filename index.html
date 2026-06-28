@@ -1088,22 +1088,19 @@ function calcDaily(entry) {
 }
 
 function calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeed) {
-  // チーム全体として全食材の必要量を最短で満たすよう枠を最適配分
-  // 考え方:
-  //   0.001日刻みでシミュレーション
-  //   毎ステップ「各食材の残り必要量」を計算
-  //   アクティブ枠(ingSlotCount)には「最も不足している食材に貢献できるポケモン」を優先配置
-  //   全食材が揃った時点で残りポケモンの稼働は0
+  // 【アルゴリズム】
+  // 1. 食材ごとに「最も効率よく集められるポケモン」を担当者に割り当て
+  // 2. 担当食材の必要量を満たすのに必要な稼働日数を計算
+  // 3. 必要日数分だけ稼働させる（合計稼働 ≤ 枠数×7日 の範囲内）
+  // これにより余剰を出さず全食材をバランスよく集められる
 
   const totalDays = 7;
   const n = ingEntries.length;
   const workDays = new Array(n).fill(0);
-
   if (n === 0) return workDays;
 
   const needKeys = Object.keys(dailyNeed);
   if (needKeys.length === 0) {
-    // 料理未登録: 均等按分
     const scale = Math.min(1, ingSlotCount / n);
     return workDays.map(() => totalDays * scale);
   }
@@ -1119,75 +1116,45 @@ function calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeed) {
   const weeklyNeed = {};
   for (const k of needKeys) weeklyNeed[k] = dailyNeed[k] * totalDays;
 
-  // 累積獲得量
-  const accumulated = Array.from({length: n}, () => ({}));
+  // ── STEP1: 食材ごとに担当ポケモンを決定 ──
+  // 各食材を最も効率よく集められるポケモンに割り当て
+  const pokemonReqDays = new Array(n).fill(0);
 
-  // 全食材充足フラグ
-  let allDone = false;
-
-  const dt = 0.005; // 刻み幅（精度と速度のバランス）
-
-  for (let t = 0; t < totalDays && !allDone; t += dt) {
-    // 現時点での残り必要量
-    const remaining = {};
-    for (const k of needKeys) {
-      let got = 0;
-      for (let i = 0; i < n; i++) got += accumulated[i][k] ?? 0;
-      remaining[k] = Math.max(0, weeklyNeed[k] - got);
+  for (const k of needKeys) {
+    if (weeklyNeed[k] <= 0) continue;
+    // この食材を持てるポケモン中で最高レートのものを担当者に
+    let bestIdx = -1, bestRate = 0;
+    for (let i = 0; i < n; i++) {
+      const rate = dailyRates[i][k] ?? 0;
+      if (rate > bestRate) { bestRate = rate; bestIdx = i; }
     }
+    if (bestIdx < 0) continue;
+    // 担当ポケモンの必要稼働日数を更新
+    const daysNeeded = weeklyNeed[k] / bestRate;
+    pokemonReqDays[bestIdx] = Math.max(pokemonReqDays[bestIdx], daysNeeded);
+  }
 
-    // 全食材充足チェック
-    if (needKeys.every(k => remaining[k] <= 0)) {
-      allDone = true;
-      break;
+  // ── STEP2: 各ポケモンを必要日数分稼働 ──
+  // 合計稼働が 枠数×7日 を超える場合は比例縮小
+  const totalReq = pokemonReqDays.reduce((s, d) => s + d, 0);
+  const maxTotal = ingSlotCount * totalDays;
+
+  if (totalReq <= maxTotal) {
+    // 枠に余裕あり: そのまま必要日数分稼働
+    for (let i = 0; i < n; i++) {
+      workDays[i] = Math.min(pokemonReqDays[i], totalDays);
     }
-
-    // 各ポケモンの「貢献スコア」を計算
-    // 残り必要量に対して何日で満たせるかの逆数（貢献度）
-    const totalRemaining = needKeys.reduce((s, k) => s + remaining[k], 0);
-
-    const scores = ingEntries.map((_, i) => {
-      if (totalRemaining <= 0) return 0;
-      let score = 0;
-      for (const k of needKeys) {
-        if (remaining[k] > 0) {
-          const rate = dailyRates[i][k] ?? 0;
-          // 不足割合で重み付け（より不足している食材を優先）
-          const urgency = remaining[k] / weeklyNeed[k];
-          score += rate * urgency;
-        }
-      }
-      return score;
-    });
-
-    // スコア上位ingSlotCount体をアクティブに選択（小数枠対応）
-    const ranked = ingEntries
-      .map((_, i) => i)
-      .sort((a, b) => scores[b] - scores[a]);
-    // ingSlotCountが小数の場合: 上位floor体はフル稼働、次の1体は端数稼働
-    const fullSlots = Math.floor(ingSlotCount);
-    const fracSlot  = ingSlotCount - fullSlots;
-    const activeIdx = ranked.slice(0, fullSlots);
-    const fracIdx   = fracSlot > 0 ? ranked[fullSlots] : null;
-
-    // アクティブなポケモンを稼働
-    for (const idx of activeIdx) {
-      workDays[idx] += dt;
-      for (const [k, rate] of Object.entries(dailyRates[idx])) {
-        accumulated[idx][k] = (accumulated[idx][k] ?? 0) + rate * dt;
-      }
-    }
-    // 端数枠のポケモンを稼働（fracSlot分だけ）
-    if (fracIdx !== null && fracIdx !== undefined) {
-      workDays[fracIdx] += dt * fracSlot;
-      for (const [k, rate] of Object.entries(dailyRates[fracIdx])) {
-        accumulated[fracIdx][k] = (accumulated[fracIdx][k] ?? 0) + rate * dt * fracSlot;
-      }
+  } else {
+    // 枠が足りない: 比例縮小（全員が同じ割合で削られる）
+    const scale = maxTotal / totalReq;
+    for (let i = 0; i < n; i++) {
+      workDays[i] = Math.min(pokemonReqDays[i] * scale, totalDays);
     }
   }
 
   return workDays;
 }
+
 
 function calculate() {
   // まず全ポケモンのweeklyを計算

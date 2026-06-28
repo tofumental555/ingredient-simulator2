@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2480117696040690"
+       crossorigin="anonymous"></script>
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>チーム食材シミュレーター｜ポケモンスリープ攻略ツール</title>
@@ -325,6 +328,41 @@
   <h1>チーム食材シミュレーター</h1>
   <p class="pks-sub">チーム5体の編成を決めて、21食分の食材が集まるか計算します。</p>
 
+  <!-- 注意書き -->
+  <div style="
+    background: rgba(169,142,232,0.08);
+    border: 1px solid rgba(169,142,232,0.3);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    color: var(--pks-text-dim);
+    line-height: 1.85;
+  ">
+    <div style="font-size:12.5px;font-weight:800;color:var(--pks-star-soft);margin-bottom:8px;">📋 計算前提・注意事項</div>
+    <div>
+      <b style="color:var(--pks-text);">【計算前提】</b><br>
+      ・ 元気は常に <b style="color:var(--pks-green);">81%以上</b> を維持している想定です<br>
+      ・ <b style="color:var(--pks-green);">毎分タップ</b>（ログイン頻度高）を前提としています<br>
+      ・ 食材の所持数はあふれていない前提です<br>
+      ・ 24時間・7日間フル稼働での計算です<br>
+    </div>
+    <div style="margin-top:8px;">
+      <b style="color:var(--pks-text);">【お手伝いスピードボーナスについて】</b><br>
+      ・ おてスピM(+14%)・おてスピS(+7%)・おてぼ(+5%) の<br>
+      　<b>チーム全員分</b>を合算して全ポケモンに適用します<br>
+      ・ 合算の <b style="color:var(--pks-star);">上限は35%</b> です<br>
+      ・ 例：おてぼ3体+おてスピM+S → 15+14+7=36% → 上限35%扱い<br>
+    </div>
+    <div style="margin-top:8px;">
+      <b style="color:var(--pks-text);">【その他】</b><br>
+      ・ 食材確率はポケモンの基礎値×(1+食材確率M×36%+S×18%) で計算<br>
+      ・ いいキャンプチケット使用時はお手伝いスピード×1.2倍<br>
+      ・ 週頭在庫（前週の持ち越し食材）は料理登録画面で入力できます<br>
+      ・ 計算結果は目安です。実際のゲームと若干異なる場合があります
+    </div>
+  </div>
+
   <div class="pks-steps">
     <div class="pks-step active" id="stepTab0">① 編成</div>
     <div class="pks-step" id="stepTab1">② ポケモン</div>
@@ -382,6 +420,15 @@
       </div>
     </div>
     <button class="pks-btn-primary" id="btnToStep1" disabled>次へ：ポケモンを登録する →</button>
+  <!-- AdSense -->
+  <div style="margin:16px 0;">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-format="autorelaxed"
+         data-ad-client="ca-pub-2480117696040690"
+         data-ad-slot="4742019348"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
   </div>
 
   <!-- ===== STEP 1: ポケモン登録 ===== -->
@@ -412,6 +459,15 @@
     </div>
     <button class="pks-btn-secondary" id="btnBack1">← ポケモンを修正</button>
     <button class="pks-btn-primary" id="btnToStep3">計算する →</button>
+  <!-- AdSense -->
+  <div style="margin:16px 0;">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-format="autorelaxed"
+         data-ad-client="ca-pub-2480117696040690"
+         data-ad-slot="4742019348"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
   </div>
 
   <!-- ===== STEP 3: 結果 ===== -->
@@ -421,6 +477,15 @@
     </div>
     <button class="pks-btn-secondary" id="btnBack2">← 料理を修正</button>
     <button class="pks-btn-secondary" id="btnRestart">最初からやり直す</button>
+  <!-- AdSense -->
+  <div style="margin:16px 0;">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-format="autorelaxed"
+         data-ad-client="ca-pub-2480117696040690"
+         data-ad-slot="4742019348"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
   </div>
 
   <p class="pks-footnote">トフメンタルパパのポケモンスリープ攻略ツール</p>
@@ -948,21 +1013,23 @@ function getEntry(pre) {
   };
 }
 
-function calcWeekly(entry) {
+function calcWeekly(entry, teamSpeedBonus = 0) {
   if (!entry) return {};
   const {pokemon, level, pattern, natureUp, natureDown, subs} = entry;
 
   // ── おてつだい時間補正 ──
-  const speedM   = subs.filter(s => s === "おてスピM").length;
-  const speedS   = subs.filter(s => s === "おてスピS").length;
-  const oteBonus = subs.filter(s => s === "おてぼ").length;
+  // おてスピM/S は自分自身のサブスキル効果（interval短縮）
+  const speedM = subs.filter(s => s === "おてスピM").length;
+  const speedS = subs.filter(s => s === "おてスピS").length;
 
   let tf = 1.0;
   if (natureUp   === "speedUp")   tf *= 0.9;
   if (natureDown === "speedDown") tf *= 1.075;
-  tf *= Math.pow(0.86, speedM);
-  tf *= Math.pow(0.93, speedS);
-  tf *= Math.pow(0.95, oteBonus);
+  // おてスピM=14%短縮、おてスピS=7%短縮（乗算方式）
+  tf *= Math.pow(1 - 0.14, speedM);
+  tf *= Math.pow(1 - 0.07, speedS);
+  // チーム全体のお手伝いスピードボーナス（おてスピM/S/おてぼの合算・上限35%）
+  tf *= (1 - teamSpeedBonus);
 
   // 実効おてつだい時間
   const levelCoef = 1 - (level - 1) * LEVEL_TIME_COEF;
@@ -1079,9 +1146,9 @@ function mergeIng(a,b) {
 }
 
 // 1日フル稼働・げんき常時MAX前提の純粋な食材獲得量
-function calcDaily(entry) {
+function calcDaily(entry, teamOtebonus = 0) {
   if (!entry) return {};
-  const result = calcWeekly(entry);
+  const result = calcWeekly(entry, teamOtebonus);
   const daily = {};
   for (const [k,v] of Object.entries(result)) daily[k] = v / 7;
   return daily;
@@ -1157,13 +1224,27 @@ function calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeed) {
 
 
 function calculate() {
-  // まず全ポケモンのweeklyを計算
+  // ── チームお手伝いスピードボーナス集計 ──
+  // おてスピM(14%) + おてスピS(7%) + おてぼ(5%) の合算、上限35%
+  // ※ チーム全員のサブスキルが対象（自分のサブスキルも含む）
+  let totalSpeedBonus = 0;
+  for (const slot of pokemonSlots) {
+    const e = getEntry(slot.prefix);
+    if (!e) continue;
+    const mCount = e.subs.filter(s => s === "おてスピM").length;
+    const sCount = e.subs.filter(s => s === "おてスピS").length;
+    const bCount = e.subs.filter(s => s === "おてぼ").length;
+    totalSpeedBonus += mCount * 0.14 + sCount * 0.07 + bCount * 0.05;
+  }
+  const teamOtebonus = Math.min(totalSpeedBonus, 0.35); // 上限35%
+
+  // まず全ポケモンのweeklyを計算（チームボーナス込み）
   const ingSlots = pokemonSlots.filter(s => s.slotType === "ing");
   const ingEntries = [];
   for (const slot of ingSlots) {
     const e = getEntry(slot.prefix);
     if (!e) continue;
-    ingEntries.push({ slot, entry: e, weekly: calcWeekly(e) });
+    ingEntries.push({ slot, entry: e, weekly: calcWeekly(e, teamOtebonus) }); // teamOtebonus=teamSpeedBonus
   }
 
   // 1日分の必要食材量を先に計算
@@ -1199,7 +1280,7 @@ function calculate() {
     for (const [k,v] of Object.entries(weekly)) scaledWeekly[k] = v * scale;
     have = mergeIng(have, scaledWeekly);
     // 表示用dailyはフル稼働1日分（稼働率なし）
-    const displayDaily = calcDaily(e);
+    const displayDaily = calcDaily(e, teamOtebonus);
     perPokemon.push({ name: e.pokemon.name, slotType: "ing", daily: displayDaily, workDays: workDays[i] });
   });
 
@@ -1207,12 +1288,12 @@ function calculate() {
   for (const slot of pokemonSlots.filter(s => s.slotType !== "ing")) {
     const e = getEntry(slot.prefix);
     if (!e) continue;
-    const weekly = calcWeekly(e);
+    const weekly = calcWeekly(e, teamOtebonus);
     const scale = slot.scale ?? 1.0;
     const scaledWeekly = {};
     for (const [k,v] of Object.entries(weekly)) scaledWeekly[k] = v * scale;
     have = mergeIng(have, scaledWeekly);
-    const displayDaily = calcDaily(e);
+    const displayDaily = calcDaily(e, teamOtebonus);
     const workDaysFixed = 7 * scale;
     perPokemon.push({ name: e.pokemon.name, slotType: slot.slotType, daily: displayDaily, workDays: workDaysFixed });
   }
@@ -1235,10 +1316,10 @@ function calculate() {
   }
 
   const surplusDays = allOk ? 7*(minRatio-1) : 0;
-  renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap);
+  renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap, teamOtebonus);
 }
 
-function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap={}) {
+function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap={}, teamOtebonus=0) {
   const needKeys = Object.keys(need);
 
   // 食材充足バー
@@ -1310,6 +1391,7 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
     <div class="pks-verdict">
       <div class="pks-verdict-main ${allOk?"ok":"ng"}">${allOk?"✅ 21食分 準備OK！":"❌ 食材が不足しています"}</div>
       <div class="pks-verdict-sub">1週間（7日）・21食分シミュレーション結果</div>
+      ${teamOtebonus > 0 ? `<div style="font-size:11px;color:var(--pks-green);margin-top:4px;">🤝 チームお手伝いスピードボーナス +${Math.round(teamOtebonus*100)}%（上限35%）</div>` : ""}
       ${Object.keys(stockMap).length > 0 ? `<div style="font-size:11px;color:var(--pks-text-dim);margin-top:4px;">週頭在庫込み</div>` : ""}
     </div>
     ${needKeys.length?`<div class="pks-result-section-title">食材ごとの充足状況（週間）</div><div class="pks-ing-grid">${ingHtml}</div>`:""}

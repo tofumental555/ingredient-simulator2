@@ -1129,8 +1129,8 @@ function calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeed) {
       if (rate > bestRate) { bestRate = rate; bestIdx = i; }
     }
     if (bestIdx < 0) continue;
-    // 担当ポケモンの必要稼働日数を更新
-    const daysNeeded = weeklyNeed[k] / bestRate;
+    // 担当ポケモンの必要稼働日数を更新（浮動小数点誤差対策で+0.5%マージン）
+    const daysNeeded = (weeklyNeed[k] / bestRate) * 1.005;
     pokemonReqDays[bestIdx] = Math.max(pokemonReqDays[bestIdx], daysNeeded);
   }
 

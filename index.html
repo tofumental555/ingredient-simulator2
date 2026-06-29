@@ -124,17 +124,21 @@
       gap: 8px;
     }
     .pks-counter-btn {
-      width: 32px; height: 32px;
+      width: 44px; height: 44px;
       background: rgba(169,142,232,0.18);
       border: 1.5px solid var(--pks-border);
-      border-radius: 8px;
+      border-radius: 10px;
       color: var(--pks-purple);
-      font-size: 18px;
+      font-size: 22px;
       font-weight: 900;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
       line-height: 1;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(169,142,232,0.3);
+      user-select: none;
+      -webkit-user-select: none;
     }
     .pks-counter-val {
       font-family: 'Zen Maru Gothic', sans-serif;
@@ -381,27 +385,27 @@
           <span class="pks-comp-emoji">🍒</span>
           <div class="pks-comp-label">きのみ</div>
           <div class="pks-counter">
-            <button class="pks-counter-btn" onclick="changeComp('berry',-0.5)">−</button>
+            <button class="pks-counter-btn" data-key="berry" data-delta="-0.5">−</button>
             <span class="pks-counter-val" id="compVal_berry">0</span>
-            <button class="pks-counter-btn" onclick="changeComp('berry',0.5)">＋</button>
+            <button class="pks-counter-btn" data-key="berry" data-delta="0.5">＋</button>
           </div>
         </div>
         <div class="pks-comp-item">
           <span class="pks-comp-emoji">🍳</span>
           <div class="pks-comp-label">食材</div>
           <div class="pks-counter">
-            <button class="pks-counter-btn" onclick="changeComp('ing',-0.5)">−</button>
+            <button class="pks-counter-btn" data-key="ing" data-delta="-0.5">−</button>
             <span class="pks-counter-val" id="compVal_ing">0</span>
-            <button class="pks-counter-btn" onclick="changeComp('ing',0.5)">＋</button>
+            <button class="pks-counter-btn" data-key="ing" data-delta="0.5">＋</button>
           </div>
         </div>
         <div class="pks-comp-item">
           <span class="pks-comp-emoji">⚡</span>
           <div class="pks-comp-label">スキル</div>
           <div class="pks-counter">
-            <button class="pks-counter-btn" onclick="changeComp('skill',-0.5)">−</button>
+            <button class="pks-counter-btn" data-key="skill" data-delta="-0.5">−</button>
             <span class="pks-counter-val" id="compVal_skill">0</span>
-            <button class="pks-counter-btn" onclick="changeComp('skill',0.5)">＋</button>
+            <button class="pks-counter-btn" data-key="skill" data-delta="0.5">＋</button>
           </div>
         </div>
 
@@ -416,7 +420,7 @@
           <div style="font-size:13px;font-weight:700;color:var(--pks-text);">使用する</div>
           <div style="font-size:11px;color:var(--pks-text-dim);margin-top:2px;">お手伝いスピード×1.2倍（interval÷1.2）</div>
         </div>
-        <div class="pks-toggle-wrap" onclick="toggleCamp()">
+        <div class="pks-toggle-wrap" id="campToggleWrap">
           <div class="pks-toggle" id="campToggle"></div>
         </div>
       </div>
@@ -636,6 +640,25 @@ async function loadDB() {
 }
 
 function initEvents() {
+  // カウンターボタン（スマホ・PC両対応）
+  document.querySelectorAll(".pks-counter-btn").forEach(btn => {
+    let touched = false;
+    btn.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      touched = true;
+      const key = btn.dataset.key;
+      const delta = parseFloat(btn.dataset.delta);
+      if (key && !isNaN(delta)) changeComp(key, delta);
+      setTimeout(() => { touched = false; }, 300);
+    }, { passive: false });
+    btn.addEventListener("click", (e) => {
+      if (touched) return; // タッチ後のclickは無視
+      const key = btn.dataset.key;
+      const delta = parseFloat(btn.dataset.delta);
+      if (key && !isNaN(delta)) changeComp(key, delta);
+    });
+  });
+
   document.getElementById("btnToStep1").addEventListener("click", () => {
     const saved = savePokemonSettings();
     buildPokemonSlots();
@@ -657,6 +680,22 @@ function initEvents() {
   });
   document.getElementById("btnAddRecipe").addEventListener("click", addRecipeRow);
   document.getElementById("btnAddStock").addEventListener("click", addStockRow);
+
+  // キャンプチケットトグル（スマホ対応）
+  const campWrap = document.getElementById("campToggleWrap");
+  if (campWrap) {
+    let campTouched = false;
+    campWrap.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      campTouched = true;
+      toggleCamp();
+      setTimeout(() => { campTouched = false; }, 300);
+    }, { passive: false });
+    campWrap.addEventListener("click", () => {
+      if (campTouched) return;
+      toggleCamp();
+    });
+  }
 
   // 初期料理行
   addRecipeRow();
@@ -1431,4 +1470,3 @@ loadDB();
 </script>
 </body>
 </html>
-

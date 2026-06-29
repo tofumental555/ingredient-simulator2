@@ -1242,14 +1242,8 @@ function calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeed) {
 
 function calculate() {
   // ── チームおてぼボーナス集計 ──
-  // おてぼはチームに「編成されている」ポケモン分のみ×5%
-  // きのみ・スキル枠：常時編成 → そのままカウント
-  // 食材ポケモン：同時に枠数分だけ編成 → ingSlotCount体分のみカウント
-  //   登録順に枠に入るので、登録順に上位ingSlotCount体のおてぼをカウント
-
   let teamOtebonusRaw = 0;
 
-  // きのみ・スキル枠（常時編成）のおてぼをカウント
   for (const slot of pokemonSlots.filter(s => s.slotType !== "ing")) {
     const e = getEntry(slot.prefix);
     if (!e) continue;
@@ -1257,102 +1251,107 @@ function calculate() {
     teamOtebonusRaw += e.subs.filter(s => s === "おてぼ").length * 0.05 * scale;
   }
 
-  // 食材ポケモン：枠数/登録体数の割合でおてぼを按分
-  const ingSlotCountForBonus = comp.ing;
+  const ingSlotCount = comp.ing;
   const ingPokemons = pokemonSlots.filter(s => s.slotType === "ing");
   const ingN = ingPokemons.length;
   if (ingN > 0) {
-    const ingScale = Math.min(1, ingSlotCountForBonus / ingN);
+    const ingScale = Math.min(1, ingSlotCount / ingN);
     for (const slot of ingPokemons) {
       const e = getEntry(slot.prefix);
       if (!e) continue;
       teamOtebonusRaw += e.subs.filter(s => s === "おてぼ").length * 0.05 * ingScale;
     }
   }
-
-  // チームおてぼ合計（上限なし・個人ボーナスと合算後に上限35%）
   const teamOtebonus = teamOtebonusRaw;
 
-  // まず全ポケモンのweeklyを計算（チームボーナス込み）
-  const ingSlots = pokemonSlots.filter(s => s.slotType === "ing");
-  const ingEntries = [];
-  for (const slot of ingSlots) {
-    const e = getEntry(slot.prefix);
-    if (!e) continue;
-    ingEntries.push({ slot, entry: e, weekly: calcWeekly(e, teamOtebonus) }); // teamOtebonus=teamSpeedBonus
-  }
-
-  // 1日分の必要食材量を先に計算
-  const weeklyNeed = {};
-  for (const id of recipeRows) {
-    const genre = document.getElementById(`rg_${id}`)?.value;
-    const name  = document.getElementById(`rn_${id}`)?.value;
-    const count = Number(document.getElementById(`rc_${id}`)?.value||0);
-    if (!genre||!name||count===0) continue;
-    const recipe = RECIPE_DATA.recipes[genre]?.[name];
-    if (!recipe) continue;
-    for (const [ing,perR] of Object.entries(recipe)) {
-      const k=normIng(ing);
-      weeklyNeed[k]=(weeklyNeed[k]??0)+perR*count;
-    }
-  }
-  const dailyNeed = {};
-  for (const [k,v] of Object.entries(weeklyNeed)) dailyNeed[k] = v / 7;
-
-  // 食材ポケモンの稼働日数シミュレーション
-  const ingSlotCount = comp.ing;
-  const workDays = calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeed);
-
-  // 週頭在庫を初期値として加算
+  // ── STEP1: 在庫 + きのみ・スキルの1週間分を先に計算 ──
+  // これらは交代なしでフル稼働するので確実に集まる
   const stockMap = getStockMap();
-  let have = { ...stockMap };
+  let haveFixed = { ...stockMap }; // 週頭在庫
   const perPokemon = [];
 
-  // 食材ポケモン：稼働日数に応じてスケーリング
-  ingEntries.forEach(({slot, entry: e, weekly}, i) => {
-    const scale = workDays[i] / 7;
-    const scaledWeekly = {};
-    for (const [k,v] of Object.entries(weekly)) scaledWeekly[k] = v * scale;
-    have = mergeIng(have, scaledWeekly);
-    // 表示用dailyはフル稼働1日分（稼働率なし）
-    const displayDaily = calcDaily(e, teamOtebonus);
-    perPokemon.push({ name: e.pokemon.name, slotType: "ing", daily: displayDaily, workDays: workDays[i] });
-  });
-
-  // きのみ・スキルはscaleに応じて稼働
   for (const slot of pokemonSlots.filter(s => s.slotType !== "ing")) {
     const e = getEntry(slot.prefix);
     if (!e) continue;
     const weekly = calcWeekly(e, teamOtebonus);
     const scale = slot.scale ?? 1.0;
     const scaledWeekly = {};
-    for (const [k,v] of Object.entries(weekly)) scaledWeekly[k] = v * scale;
-    have = mergeIng(have, scaledWeekly);
+    for (const [k, v] of Object.entries(weekly)) scaledWeekly[k] = v * scale;
+    haveFixed = mergeIng(haveFixed, scaledWeekly);
     const displayDaily = calcDaily(e, teamOtebonus);
     const workDaysFixed = 7 * scale;
     perPokemon.push({ name: e.pokemon.name, slotType: slot.slotType, daily: displayDaily, workDays: workDaysFixed });
   }
 
-  const need = weeklyNeed;
+  // ── STEP2: 21食分の必要量を計算 ──
+  const need = {};
+  for (const id of recipeRows) {
+    const genre = document.getElementById(`rg_${id}`)?.value;
+    const name  = document.getElementById(`rn_${id}`)?.value;
+    const count = Number(document.getElementById(`rc_${id}`)?.value || 0);
+    if (!genre || !name || count === 0) continue;
+    const recipe = RECIPE_DATA.recipes[genre]?.[name];
+    if (!recipe) continue;
+    for (const [ing, perR] of Object.entries(recipe)) {
+      const k = normIng(ing);
+      need[k] = (need[k] ?? 0) + perR * count;
+    }
+  }
+
+  // ── STEP3: 在庫＋きのみ・スキル分を差し引いた「食材ポケモンが集めるべき残量」を計算 ──
+  const needAfterFixed = {};
+  for (const k of Object.keys(need)) {
+    const remaining = (need[k] ?? 0) - (haveFixed[k] ?? 0);
+    if (remaining > 0) needAfterFixed[k] = remaining;
+    // 0以下ならすでに充足 → 食材ポケモンの担当なし
+  }
+  const dailyNeedForIng = {};
+  for (const [k, v] of Object.entries(needAfterFixed)) dailyNeedForIng[k] = v / 7;
+
+  // ── STEP4: 食材ポケモンの最適稼働スケジュール計算 ──
+  const ingEntries = [];
+  for (const slot of ingPokemons) {
+    const e = getEntry(slot.prefix);
+    if (!e) continue;
+    ingEntries.push({ slot, entry: e, weekly: calcWeekly(e, teamOtebonus) });
+  }
+
+  const workDays = calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeedForIng);
+
+  // ── STEP5: 食材ポケモンの獲得量を加算 ──
+  let have = { ...haveFixed };
+
+  ingEntries.forEach(({ entry: e }, i) => {
+    const scale = workDays[i] / 7;
+    const weekly = ingEntries[i].weekly;
+    const scaledWeekly = {};
+    for (const [k, v] of Object.entries(weekly)) scaledWeekly[k] = v * scale;
+    have = mergeIng(have, scaledWeekly);
+    const displayDaily = calcDaily(e, teamOtebonus);
+    perPokemon.push({ name: e.pokemon.name, slotType: "ing", daily: displayDaily, workDays: workDays[i] });
+  });
+
+  // ── STEP6: 充足判定 ──
   const needKeys = Object.keys(need);
   let allOk = true, minRatio = Infinity;
   for (const k of needKeys) {
-    const ratio = (have[k]??0)/need[k];
-    if (ratio<1) allOk=false;
-    if (ratio<minRatio) minRatio=ratio;
+    const ratio = (have[k] ?? 0) / need[k];
+    if (ratio < 1) allOk = false;
+    if (ratio < minRatio) minRatio = ratio;
   }
-  if (needKeys.length===0){ minRatio=1; allOk=true; }
+  if (needKeys.length === 0) { minRatio = 1; allOk = true; }
 
-  // 余剰食材（週間）= have - need
+  // 余剰食材
   const surplus = {};
-  for (const [k,v] of Object.entries(have)) {
+  for (const [k, v] of Object.entries(have)) {
     const leftover = v - (need[k] ?? 0);
     if (leftover > 0.05) surplus[k] = leftover;
   }
 
-  const surplusDays = allOk ? 7*(minRatio-1) : 0;
+  const surplusDays = allOk ? 7 * (minRatio - 1) : 0;
   renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap, teamOtebonus);
 }
+
 
 function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap={}, teamOtebonus=0) {
   const needKeys = Object.keys(need);

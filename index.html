@@ -426,12 +426,11 @@
       </div>
     </div>
     <button class="pks-btn-primary" id="btnToStep1" disabled>次へ：ポケモンを登録する →</button>
-  <!-- AdSense -->
-  <div style="margin:16px 0;">
+  <div style="margin:14px 0;text-align:center;">
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-format="autorelaxed"
-         data-ad-client="ca-pub-2480117696040690"
+         data-ad-client="ca-pub-2480117696040692"
          data-ad-slot="4742019348"></ins>
   </div>
   </div>
@@ -464,12 +463,11 @@
     </div>
     <button class="pks-btn-secondary" id="btnBack1">← ポケモンを修正</button>
     <button class="pks-btn-primary" id="btnToStep3">計算する →</button>
-  <!-- AdSense -->
-  <div style="margin:16px 0;">
+  <div style="margin:14px 0;text-align:center;">
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-format="autorelaxed"
-         data-ad-client="ca-pub-2480117696040690"
+         data-ad-client="ca-pub-2480117696040692"
          data-ad-slot="4742019348"></ins>
   </div>
   </div>
@@ -481,12 +479,11 @@
     </div>
     <button class="pks-btn-secondary" id="btnBack2">← 料理を修正</button>
     <button class="pks-btn-secondary" id="btnRestart">最初からやり直す</button>
-  <!-- AdSense -->
-  <div style="margin:16px 0;">
+  <div style="margin:14px 0;text-align:center;">
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-format="autorelaxed"
-         data-ad-client="ca-pub-2480117696040690"
+         data-ad-client="ca-pub-2480117696040692"
          data-ad-slot="4742019348"></ins>
   </div>
   </div>
@@ -639,7 +636,9 @@ async function loadDB() {
 function initEvents() {
   document.getElementById("btnToStep1").addEventListener("click", () => {
     const saved = savePokemonSettings();
-    buildPokemonSlots();
+    // 食材ポケモンの登録体数を保持（編成変更で増減する可能性があるため）
+    const savedIngCount = saved.filter(s => s.slotType === "ing").length;
+    buildPokemonSlots(savedIngCount);
     restorePokemonSettings(saved);
     goStep(1);
   });
@@ -658,6 +657,9 @@ function initEvents() {
   });
   document.getElementById("btnAddRecipe").addEventListener("click", addRecipeRow);
   document.getElementById("btnAddStock").addEventListener("click", addStockRow);
+
+  // 食材ポケモン初期4枠
+  for (let i = 0; i < 4; i++) addIngPokemonCard();
 
   // 初期料理行
   addRecipeRow();
@@ -1103,6 +1105,7 @@ function savePokemonSettings() {
     const pre = slot.prefix;
     const entry = {
       slotType: slot.slotType,
+      cardId: slot.cardId,
       p:    document.getElementById(`${pre}_p`)?.value    ?? "",
       lv:   document.getElementById(`${pre}_lv`)?.value   ?? "50",
       pat:  document.getElementById(`${pre}_pat`)?.value  ?? "aab",
@@ -1349,11 +1352,17 @@ function calculate() {
   }
 
   const surplusDays = allOk ? 7 * (minRatio - 1) : 0;
-  renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap, teamOtebonus);
+  // 実際にかかる日数 = 食材ポケモンの稼働日数合計 / 食材枠数
+  const totalIngWorkDays = workDays.reduce((s, d) => s + d, 0);
+  const actualDays = ingSlotCount > 0 && workDays.length > 0
+    ? totalIngWorkDays / ingSlotCount
+    : (allOk ? 7 * (1/minRatio) : 7 / minRatio);
+
+  renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap, teamOtebonus, actualDays);
 }
 
 
-function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap={}, teamOtebonus=0) {
+function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusDays, stockMap={}, teamOtebonus=0, actualDays=null) {
   const needKeys = Object.keys(need);
 
   // 食材充足バー
@@ -1371,8 +1380,9 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
     </div>`;
   }).join("");
 
-  // 必要日数計算 = 7 / minRatio
-  const daysNeeded = needKeys.length > 0 ? (7 / minRatio) : 0;
+  // 実際にかかる日数（食材ポケモンの稼働日数合計/枠数）
+  // actualDaysがあればそれを使う、なければminRatioから推定
+  const daysNeeded = actualDays !== null ? actualDays : (needKeys.length > 0 ? (7 / minRatio) : 0);
 
   // 時間的余力 or 不足
   let detailHtml = "";
@@ -1439,9 +1449,10 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
   `;
 }
 
-// AdSense初期化
+// AdSense初期化（insタグ分まとめてpush）
 try {
-  for (let i = 0; i < 0; i++) {
+  var ads = document.querySelectorAll('.adsbygoogle');
+  for (var i = 0; i < ads.length; i++) {
     (adsbygoogle = window.adsbygoogle || []).push({});
   }
 } catch(e) {}

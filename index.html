@@ -349,10 +349,12 @@
     </div>
     <div style="margin-top:8px;">
       <b style="color:var(--pks-text);">【お手伝いスピードボーナスについて】</b><br>
-      ・ おてスピM(+14%)・おてスピS(+7%)・おてぼ(+5%) の<br>
-      　<b>チーム全員分</b>を合算して全ポケモンに適用します<br>
-      ・ 合算の <b style="color:var(--pks-star);">上限は35%</b> です<br>
-      ・ 例：おてぼ3体+おてスピM+S → 15+14+7=36% → 上限35%扱い<br>
+      ・ <b>おてスピM(+14%)・おてスピS(+7%)</b> は持つポケモン<b>本人のみ</b>に適用<br>
+      ・ <b>おてぼ(+5%)</b> はチームに<b>編成されている間</b>、全員のスピードを上昇<br>
+      ・ 各ポケモンへの適用ボーナス = 自分のおてスピM/S + チームのおてぼ合計<br>
+      ・ この合算が <b style="color:var(--pks-star);">35%を超えたら35%</b> に丸めます<br>
+      ・ 例：おてぼ3体編成中(+15%) + 自分がおてスピM+S(+21%) = 36% → <b>35%</b><br>
+      ・ 食材ポケモンは交代運用のため、おてぼは枠数÷登録体数で按分計算します<br>
     </div>
     <div style="margin-top:8px;">
       <b style="color:var(--pks-text);">【その他】</b><br>
@@ -1013,23 +1015,25 @@ function getEntry(pre) {
   };
 }
 
-function calcWeekly(entry, teamSpeedBonus = 0) {
+function calcWeekly(entry, teamOtebonus = 0) {
+  // teamOtebonus: チームに編成中のおてぼ持ちポケモン数×5%の合計
   if (!entry) return {};
   const {pokemon, level, pattern, natureUp, natureDown, subs} = entry;
 
   // ── おてつだい時間補正 ──
-  // おてスピM/S は自分自身のサブスキル効果（interval短縮）
   const speedM = subs.filter(s => s === "おてスピM").length;
   const speedS = subs.filter(s => s === "おてスピS").length;
 
   let tf = 1.0;
   if (natureUp   === "speedUp")   tf *= 0.9;
   if (natureDown === "speedDown") tf *= 1.075;
-  // おてスピM=14%短縮、おてスピS=7%短縮（乗算方式）
-  tf *= Math.pow(1 - 0.14, speedM);
-  tf *= Math.pow(1 - 0.07, speedS);
-  // チーム全体のお手伝いスピードボーナス（おてスピM/S/おてぼの合算・上限35%）
-  tf *= (1 - teamSpeedBonus);
+
+  // お手伝いスピードボーナス:
+  // 自分のおてスピM×14% + おてスピS×7% + チームおてぼ合計
+  // を合算して上限35%、interval短縮に適用
+  const personalBonus = speedM * 0.14 + speedS * 0.07;
+  const totalBonus = Math.min(personalBonus + teamOtebonus, 0.35);
+  tf *= (1 - totalBonus);
 
   // 実効おてつだい時間
   const levelCoef = 1 - (level - 1) * LEVEL_TIME_COEF;
@@ -1224,19 +1228,37 @@ function calcIngPokemonSchedule(ingEntries, ingSlotCount, dailyNeed) {
 
 
 function calculate() {
-  // ── チームお手伝いスピードボーナス集計 ──
-  // おてスピM(14%) + おてスピS(7%) + おてぼ(5%) の合算、上限35%
-  // ※ チーム全員のサブスキルが対象（自分のサブスキルも含む）
-  let totalSpeedBonus = 0;
-  for (const slot of pokemonSlots) {
+  // ── チームおてぼボーナス集計 ──
+  // おてぼはチームに「編成されている」ポケモン分のみ×5%
+  // きのみ・スキル枠：常時編成 → そのままカウント
+  // 食材ポケモン：同時に枠数分だけ編成 → ingSlotCount体分のみカウント
+  //   登録順に枠に入るので、登録順に上位ingSlotCount体のおてぼをカウント
+
+  let teamOtebonusRaw = 0;
+
+  // きのみ・スキル枠（常時編成）のおてぼをカウント
+  for (const slot of pokemonSlots.filter(s => s.slotType !== "ing")) {
     const e = getEntry(slot.prefix);
     if (!e) continue;
-    const mCount = e.subs.filter(s => s === "おてスピM").length;
-    const sCount = e.subs.filter(s => s === "おてスピS").length;
-    const bCount = e.subs.filter(s => s === "おてぼ").length;
-    totalSpeedBonus += mCount * 0.14 + sCount * 0.07 + bCount * 0.05;
+    const scale = slot.scale ?? 1.0;
+    teamOtebonusRaw += e.subs.filter(s => s === "おてぼ").length * 0.05 * scale;
   }
-  const teamOtebonus = Math.min(totalSpeedBonus, 0.35); // 上限35%
+
+  // 食材ポケモン：枠数/登録体数の割合でおてぼを按分
+  const ingSlotCount = comp.ing;
+  const ingPokemons = pokemonSlots.filter(s => s.slotType === "ing");
+  const ingN = ingPokemons.length;
+  if (ingN > 0) {
+    const ingScale = Math.min(1, ingSlotCount / ingN);
+    for (const slot of ingPokemons) {
+      const e = getEntry(slot.prefix);
+      if (!e) continue;
+      teamOtebonusRaw += e.subs.filter(s => s === "おてぼ").length * 0.05 * ingScale;
+    }
+  }
+
+  // チームおてぼ合計（上限なし・個人ボーナスと合算後に上限35%）
+  const teamOtebonus = teamOtebonusRaw;
 
   // まず全ポケモンのweeklyを計算（チームボーナス込み）
   const ingSlots = pokemonSlots.filter(s => s.slotType === "ing");
@@ -1391,7 +1413,7 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
     <div class="pks-verdict">
       <div class="pks-verdict-main ${allOk?"ok":"ng"}">${allOk?"✅ 21食分 準備OK！":"❌ 食材が不足しています"}</div>
       <div class="pks-verdict-sub">1週間（7日）・21食分シミュレーション結果</div>
-      ${teamOtebonus > 0 ? `<div style="font-size:11px;color:var(--pks-green);margin-top:4px;">🤝 チームお手伝いスピードボーナス +${Math.round(teamOtebonus*100)}%（上限35%）</div>` : ""}
+      ${teamOtebonus > 0 ? `<div style="font-size:11px;color:var(--pks-green);margin-top:4px;">🤝 チームおてぼボーナス +${Math.round(teamOtebonus*100)}%（編成中のおてぼ持ち分・上限35%）</div>` : ""}
       ${Object.keys(stockMap).length > 0 ? `<div style="font-size:11px;color:var(--pks-text-dim);margin-top:4px;">週頭在庫込み</div>` : ""}
     </div>
     ${needKeys.length?`<div class="pks-result-section-title">食材ごとの充足状況（週間）</div><div class="pks-ing-grid">${ingHtml}</div>`:""}
@@ -1409,3 +1431,4 @@ loadDB();
 </script>
 </body>
 </html>
+

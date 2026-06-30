@@ -1040,9 +1040,14 @@ function calcWeekly(entry, teamOtebonus = 0) {
   if (!entry) return {};
   const {pokemon, level, pattern, natureUp, natureDown, subs} = entry;
 
+  // ── サブスキル解放レベルでフィルタリング ──
+  // Lv10:1枠目, Lv25:2枠目, Lv50:3枠目, Lv70:4枠目, Lv80:5枠目
+  const SUB_UNLOCK = [10, 25, 50, 70, 80];
+  const activeSubs = subs.filter((_, i) => level >= SUB_UNLOCK[i]);
+
   // ── おてつだい時間補正 ──
-  const speedM = subs.filter(s => s === "おてスピM").length;
-  const speedS = subs.filter(s => s === "おてスピS").length;
+  const speedM = activeSubs.filter(s => s === "おてスピM").length;
+  const speedS = activeSubs.filter(s => s === "おてスピS").length;
 
   let tf = 1.0;
   if (natureUp   === "speedUp")   tf *= 0.9;
@@ -1065,8 +1070,8 @@ function calcWeekly(entry, teamOtebonus = 0) {
   // ── 食材発見率 ──
   // 正しい計算式: 基礎fr × (1 + 0.36×M + 0.18×S) × 性格補正
   // ※サブスキル同士は加算、基礎frとは乗算（Wiki検証済み）
-  const foodM = subs.filter(s => s === "食材確率M").length;
-  const foodS = subs.filter(s => s === "食材確率S").length;
+  const foodM = activeSubs.filter(s => s === "食材確率M").length;
+  const foodS = activeSubs.filter(s => s === "食材確率S").length;
   let fr = (pokemon.ingredientFindRate ?? 0) / 100;
   fr *= (1 + 0.36 * foodM + 0.18 * foodS);
   // 性格補正（乗算）
@@ -1252,11 +1257,13 @@ function calculate() {
   // ── チームおてぼボーナス集計 ──
   let teamOtebonusRaw = 0;
 
+  const SUB_UNLOCK_LEVELS = [10, 25, 50, 70, 80];
   for (const slot of pokemonSlots.filter(s => s.slotType !== "ing")) {
     const e = getEntry(slot.prefix);
     if (!e) continue;
     const scale = slot.scale ?? 1.0;
-    teamOtebonusRaw += e.subs.filter(s => s === "おてぼ").length * 0.05 * scale;
+    const activeSubs = e.subs.filter((_, i) => e.level >= SUB_UNLOCK_LEVELS[i]);
+    teamOtebonusRaw += activeSubs.filter(s => s === "おてぼ").length * 0.05 * scale;
   }
 
   const ingSlotCount = comp.ing;
@@ -1267,7 +1274,8 @@ function calculate() {
     for (const slot of ingPokemons) {
       const e = getEntry(slot.prefix);
       if (!e) continue;
-      teamOtebonusRaw += e.subs.filter(s => s === "おてぼ").length * 0.05 * ingScale;
+      const activeSubsIng = e.subs.filter((_, i) => e.level >= SUB_UNLOCK_LEVELS[i]);
+      teamOtebonusRaw += activeSubsIng.filter(s => s === "おてぼ").length * 0.05 * ingScale;
     }
   }
   const teamOtebonus = teamOtebonusRaw;

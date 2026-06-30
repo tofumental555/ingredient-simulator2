@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2480117696040690"
-       crossorigin="anonymous"></script>
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>チーム食材シミュレーター｜ポケモンスリープ攻略ツール</title>
@@ -426,15 +424,6 @@
       </div>
     </div>
     <button class="pks-btn-primary" id="btnToStep1" disabled>次へ：ポケモンを登録する →</button>
-
-  <div style="margin:16px 0;">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-2480117696040690"
-         data-ad-slot="5391712453"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-  </div>
 </div>
 
   <!-- ===== STEP 1: ポケモン登録 ===== -->
@@ -465,15 +454,6 @@
     </div>
     <button class="pks-btn-secondary" id="btnBack1">← ポケモンを修正</button>
     <button class="pks-btn-primary" id="btnToStep3">計算する →</button>
-
-  <div style="margin:16px 0;">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-2480117696040690"
-         data-ad-slot="5391712453"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-  </div>
 </div>
 
   <!-- ===== STEP 3: 結果 ===== -->
@@ -483,15 +463,6 @@
     </div>
     <button class="pks-btn-secondary" id="btnBack2">← 料理を修正</button>
     <button class="pks-btn-secondary" id="btnRestart">最初からやり直す</button>
-
-  <div style="margin:16px 0;">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-2480117696040690"
-         data-ad-slot="5391712453"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-  </div>
 </div>
 
   <p class="pks-footnote">トフメンタルパパのポケモンスリープ攻略ツール</p>
@@ -631,7 +602,7 @@ function toggleCamp() {
 let pokemonSlots = [];
 
 /* ===== DB読み込み ===== */
-const POKEMON_JSON_URL = "https://tofumental555.github.io/ingredient-simulator2/pokemon_data.json";
+const POKEMON_JSON_URL = "https://tofumental555.github.io/ingredient-simulator/pokemon_data.json";
 
 async function loadDB() {
   try { pokemonDB = await (await fetch(POKEMON_JSON_URL)).json(); }
@@ -1463,15 +1434,6 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
 }
 
 loadDB();
-
-window.addEventListener('load', function() {
-  try {
-    var insEls = document.querySelectorAll('ins.adsbygoogle');
-    for (var i = 0; i < insEls.length; i++) {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    }
-  } catch(e) {}
-});
 </script>
 </body>
 </html>

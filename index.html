@@ -426,14 +426,16 @@
       </div>
     </div>
     <button class="pks-btn-primary" id="btnToStep1" disabled>次へ：ポケモンを登録する →</button>
-  <div style="margin:14px 0;text-align:center;">
+
+  <div style="margin:16px 0;">
     <ins class="adsbygoogle"
          style="display:block"
-         data-ad-format="autorelaxed"
          data-ad-client="ca-pub-2480117696040690"
-         data-ad-slot="4742019348"></ins>
+         data-ad-slot="5391712453"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
   </div>
-  </div>
+</div>
 
   <!-- ===== STEP 1: ポケモン登録 ===== -->
   <div id="step1" class="pks-hidden">
@@ -463,14 +465,16 @@
     </div>
     <button class="pks-btn-secondary" id="btnBack1">← ポケモンを修正</button>
     <button class="pks-btn-primary" id="btnToStep3">計算する →</button>
-  <div style="margin:14px 0;text-align:center;">
+
+  <div style="margin:16px 0;">
     <ins class="adsbygoogle"
          style="display:block"
-         data-ad-format="autorelaxed"
          data-ad-client="ca-pub-2480117696040690"
-         data-ad-slot="4742019348"></ins>
+         data-ad-slot="5391712453"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
   </div>
-  </div>
+</div>
 
   <!-- ===== STEP 3: 結果 ===== -->
   <div id="step3" class="pks-hidden">
@@ -479,14 +483,16 @@
     </div>
     <button class="pks-btn-secondary" id="btnBack2">← 料理を修正</button>
     <button class="pks-btn-secondary" id="btnRestart">最初からやり直す</button>
-  <div style="margin:14px 0;text-align:center;">
+
+  <div style="margin:16px 0;">
     <ins class="adsbygoogle"
          style="display:block"
-         data-ad-format="autorelaxed"
          data-ad-client="ca-pub-2480117696040690"
-         data-ad-slot="4742019348"></ins>
+         data-ad-slot="5391712453"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
   </div>
-  </div>
+</div>
 
   <p class="pks-footnote">トフメンタルパパのポケモンスリープ攻略ツール</p>
 </div>
@@ -711,7 +717,7 @@ function updateCompUI() {
 /* ===== ポケモンスロット生成 ===== */
 let ingPanel = null; // 食材パネルへの参照
 
-function buildPokemonSlots() {
+function buildPokemonSlots(ingInitCount) {
   pokemonSlots = [];
   ingPanel = null;
   const section = document.getElementById("pokemonSections");
@@ -1450,14 +1456,13 @@ function renderResult(have, need, surplus, perPokemon, allOk, minRatio, surplusD
 
 loadDB();
 
-// AdSense: windowロード後にpush（scriptタグを使わず安全に実行）
 window.addEventListener('load', function() {
   try {
-    var ads = document.querySelectorAll('ins.adsbygoogle');
-    for (var i = 0; i < ads.length; i++) {
+    var insEls = document.querySelectorAll('ins.adsbygoogle');
+    for (var i = 0; i < insEls.length; i++) {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     }
-  } catch(e) { console.log('AdSense error:', e); }
+  } catch(e) {}
 });
 </script>
 </body>
